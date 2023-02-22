@@ -10,7 +10,7 @@
 // });
 
 // require pool from db
-const pool = require('./db/index.js');
+const pool = require('./index.js');
 
 /**
  * Get a single user from the database given their email.
