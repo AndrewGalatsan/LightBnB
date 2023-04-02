@@ -2,12 +2,12 @@ const properties = require('./json/properties.json');
 const users = require('./json/users.json');
 const { Pool } = require('pg');
 
-const pool = new Pool({
-  user: 'vagrant',
-  password: '123',
-  host: 'localhost',
-  database: 'lightbnb'
-});
+// const pool = new Pool({
+//   user: 'vagrant',
+//   password: '123',
+//   host: 'localhost',
+//   database: 'lightbnb'
+// });
 
 // require pool from db
 const pool = require('./db/index.js');
@@ -134,7 +134,7 @@ const getAllProperties = function(options, limit = 10) {
   }
 
   if (options.owner_id) {
-    queryParams.push(`%${options.owner_id}%`);
+    queryParams.push(`${options.owner_id}`);
     queryString += `WHERE owner_id = $${queryParams.length} `;
   }
 
@@ -158,29 +158,35 @@ const getAllProperties = function(options, limit = 10) {
       queryString += `WHERE cost_per_night < $${queryParams.length} `;
     }
   }
+  queryString += `
+  GROUP BY properties.id `
 
   if (options.minimum_rating > 0) {
     queryParams.push(options.minimum_rating);
-    if (queryParams.length >= 2) {
-      queryString += `AND rating > $${queryParams.length}`;
-    } else {
-      queryString += `WHERE rating > $${queryParams.length}`;
-    }
+      queryString += `HAVING avg(property_reviews.rating) > $${queryParams.length}`;
   }
 
   // 4
   queryParams.push(limit);
   queryString += `
-  GROUP BY properties.id
   ORDER BY cost_per_night
   LIMIT $${queryParams.length};
   `;
 
   // 6
   return pool.query(queryString, queryParams)
-    .then(res => res.rows);
-};
+    .then(res => {
+      console.log(res.rows)
+      return res.rows});
+}; 
 exports.getAllProperties = getAllProperties;
+
+// SELECT properties.*
+//   FROM properties
+//   WHERE owner_id = '1001' 
+//   GROUP BY properties.id
+//   ORDER BY cost_per_night
+//   LIMIT 20;
 
 
 /**
@@ -189,6 +195,7 @@ exports.getAllProperties = getAllProperties;
  * @return {Promise<{}>} A promise to the property.
  */
 const addProperty = function(property) {
+  console.log(property)
   return pool.query(`
   INSERT INTO properties (
     owner_id, title, description, thumbnail_photo_url, cover_photo_url, cost_per_night, street, city, province, post_code, country, parking_spaces, number_of_bathrooms, number_of_bedrooms
@@ -200,7 +207,7 @@ const addProperty = function(property) {
     property.description,
     property.thumbnail_photo_url,
     property.cover_photo_url,
-    property.cost_per_night,
+    property.cost_per_night*100,
     property.street,
     property.city,
     property.province,
@@ -210,6 +217,8 @@ const addProperty = function(property) {
     property.number_of_bathrooms,
     property.number_of_bedrooms
   ])
-  .then(res => res.rows);
+  .then(res => {
+    console.log(res) 
+    return res.rows});
 }
 exports.addProperty = addProperty;
